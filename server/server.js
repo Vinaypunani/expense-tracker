@@ -18,13 +18,36 @@ const app = express();
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
-app.use(
-    cors({
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
-        credentials: true
-    })
-);
+// CORS configuration - Enhanced for production
+const corsOptions = {
+    origin: function (origin, callback) {
+        const allowedOrigins = [
+            process.env.CLIENT_URL,
+            'http://localhost:5173',
+            'http://localhost:3000'
+        ].filter(Boolean);
+
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.log('CORS blocked origin:', origin);
+            console.log('Allowed origins:', allowedOrigins);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range']
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight
+app.options('*', cors(corsOptions));
 
 // Body parser middleware
 app.use(express.json());
